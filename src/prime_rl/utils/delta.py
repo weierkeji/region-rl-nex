@@ -1034,6 +1034,9 @@ def _extract_changed_values(
         dtype = torch.float32 if base_tensor.dtype in (torch.float16, torch.bfloat16) else torch.float64
         values = selected_target.to(dtype) - selected_base.to(dtype)
         reconstructed = (selected_base.to(dtype) + values).to(base_tensor.dtype)
+        if not torch.equal(reconstructed, selected_target) and values.dtype != torch.float64:
+            values = selected_target.double() - selected_base.double()
+            reconstructed = (selected_base.double() + values).to(base_tensor.dtype)
         if not torch.equal(reconstructed, selected_target):
             raise ValueError("weight update cannot be represented exactly as an additive sparse delta")
     return indices, values.contiguous()

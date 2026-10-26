@@ -53,6 +53,8 @@ uv run sft @ examples/reverse_text/sft.toml --dry-run
 
 OpenAI-compatible API plus prime-rl custom endpoints (`/update_weights`, `/load_lora_adapter`, `/init_broadcaster`). Always use this entrypoint — never `vllm serve` directly.
 
+When running multiple independent TP=1 inference processes on one host, explicitly budget their CPU threads. Start with `OMP_NUM_THREADS=1 MKL_NUM_THREADS=1` on each inference command and measure actual update latency. vLLM's single-process executor does not apply the multiprocessing executor's automatic thread reduction; concurrent sparse-delta layout operations can otherwise oversubscribe the container's CPU quota. Scope these environment variables to inference commands so trainer settings are preserved.
+
 ```bash
 uv run inference @ configs/debug/infer.toml
 uv run inference --model.name Qwen/Qwen3-0.6B --model.enforce-eager

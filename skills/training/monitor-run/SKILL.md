@@ -130,6 +130,20 @@ curl -s http://localhost:8000/metrics | grep -E "num_requests|gpu_cache_usage"
 # vllm:num_requests_running, vllm:num_requests_waiting, vllm:gpu_cache_usage_perc (→1.0 = KV cache saturated)
 ```
 
+### Uploading offline W&B runs
+
+When asked to upload an archived run, inspect both `wandb/` and `orchestrator-wandb/` for `offline-run-*/run-*.wandb`; auxiliary statistics may have their own run. Pass explicit run directories to `uv run wandb sync --entity <entity> --project <project> <run-directory> ...` to preserve run IDs and groups without uploading unrelated experiments. Use the exact destination project spelling, which can differ from the archived config.
+
+If sync reports no API key, have the user run `uv run wandb login` in the repository terminal; never request or print the key in chat. A sandbox `ProxyError` requires rerunning with network escalation, not changing credentials or disabling the proxy. Wait for each sync to finish and verify the remote run IDs and history before reporting success. Sync uploads the recorded W&B data and associated files, not arbitrary CSV/JSON files elsewhere in the archive.
+
+`wandb sync` can exit successfully while artifact uploads fail. Archived incremental tables may reference missing `/root/.local/share/wandb/artifacts/staging/tmp*` files even when `files/media/table/*.table.json` survives. With SDK 0.26.1, recover these using the original SDK: scan records with `DataStore`, match history `samples.artifact_path` to each artifact client ID and manifest path, rebuild `wandb.Table` from the archived columns/data, restore `increment_num` and `previous_increments_paths`, and serialize its artifact JSON with `json.dumps(..., sort_keys=True)`. Verify every payload against the original manifest's base64 MD5 and byte length before use; stop if either differs. Rewrite only manifest `local_path` fields in a separate `.wandb` copy using `DataStore.write`, copy its associated files, and sync that copy to the same run ID. Preserve original records, artifact IDs, digests and history; never substitute plain media JSON for the richer artifact JSON. Verify remote committed artifact versions as well as metrics after recovery.
+
+If the repaired incremental artifacts still fail with `invalid artifact manifest digest ... expected , got ...`, do not report full artifact recovery. A verified fallback is to resume the same remote run with `resume="must"` in online mode, concatenate the recovered increments in increment order, and log an ordinary immutable `wandb.Table` under a separate `samples_recovered` key. Keep the original metrics/history and explain that old incremental-table references remain unresolved. Confirm the new artifact is `COMMITTED`, download it, and compare every row and column against the recovered input. Record the recovery count and reason in run summary; this adds one history record and does not represent another training step.
+
+### Comparing archived runs in W&B
+
+For a comparison view without changing original runs, extract matching scalar metrics from each role's offline records and log paired `wandb.Plotly` line charts in a separate run with `job_type="comparison"`. Use fixed colors and legend names across charts, and record source run IDs and aggregation rules. Trainer/orchestrator curves use the explicit `step` field, not W&B `_step`, because logging frequencies differ. Parameter-change observers use `_step` as the optimizer update; verify this against `parameter_changes.jsonl` before plotting. When multiple observations share a step, explicitly document the reduction (for example, last finite observation per metric); do not silently smooth or align by wall time. Distinguish trainer and orchestrator metrics with identical names by panel prefixes. Verify uploaded Plotly JSON has both series, expected colors and exact source data. A comparison run is a visualization, not another training experiment.
+
 ### Rollouts
 
 ```

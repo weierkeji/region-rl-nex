@@ -72,6 +72,8 @@ Leave it unset for normal training. When enabled, it exports every sequence from
 
 ## Streaming sparse deltas
 
+For framework migration and protocol details, read [the sparse delta design](../../docs/sparse_delta_design.md) and [interface contract](../../docs/sparse_delta_interfaces.md). They distinguish current v2 behavior from target-framework requirements, including immutable broadcast snapshots, base alignment, and dirty-state recovery. The `ModelDeltaManager` extraction methods return `DeltaStats` when `save_stats=true`; that option does not itself write a statistics JSON file.
+
 At the shared RL config level, `stage_transport = "streaming_upload"` automatically enables trainer-side streaming delta extraction. The trainer writes append-only records to `delta.stream`, allowing extraction, file output, and HTTP upload to overlap. `delta_stream_group_size` controls the number of transformer layers between flushes and defaults to 4.
 
 ```toml
