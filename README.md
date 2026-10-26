@@ -102,6 +102,10 @@ Relay profiles:
 
 ### Sparse Delta Transfer
 
+For implementation details and migration to another RL framework, see the
+[design document](docs/sparse_delta_design.md) and
+[interface specification](docs/sparse_delta_interfaces.md) (Chinese).
+
 ```toml
 [weight_broadcast]
 type = "filesystem"
